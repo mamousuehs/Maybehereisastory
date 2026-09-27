@@ -6,7 +6,7 @@ configuration:
   enablePopovers: true
   analytics: null
   locale: zh-CN
-  baseUrl: localhost
+  baseUrl: mamousuehs.github.io/Maybehereisastory
   ignorePatterns:
     - private
     - templates
