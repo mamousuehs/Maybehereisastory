@@ -1,12 +1,10 @@
 ---
 title: 第一卷
 description: 《或许这里有个故事》第一卷。
+order: 1
+cssclasses:
+  - novel-directory
 ---
-
-# 第一卷
-
-## 目录
 
 1. [[序章|序章：意义]]
 2. [[第一章 开门]]
-
