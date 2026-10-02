@@ -1,6 +1,7 @@
 import { QuartzComponent, QuartzComponentProps } from "./types"
 import { QuartzPluginData } from "../plugins/vfile"
 import { FullSlug, resolveRelative } from "../util/path"
+import sidebarScript from "./scripts/novel-sidebar"
 
 // Read chapter numbers, not the alphabetical order of Chinese titles.
 export function chineseNumber(value: string): number {
@@ -67,6 +68,62 @@ function chaptersIn(allFiles: QuartzPluginData[], folder: string) {
   )
 }
 
+function volumesIn(allFiles: QuartzPluginData[]) {
+  return sortForReading(
+    allFiles.filter(
+      (file) => String(file.slug).endsWith("/index") && String(file.slug).split("/").length === 2,
+    ),
+  )
+}
+
+export function readingSequence(allFiles: QuartzPluginData[]): QuartzPluginData[] {
+  const files = allFiles.filter((file) => file.filePath)
+  const home = files.find((file) => file.slug === "index")
+  const introduction = files.find((file) => file.slug === "声明与人物介绍")
+  return [
+    ...(home ? [home] : []),
+    ...(introduction ? [introduction] : []),
+    ...volumesIn(files).flatMap((volume) => [
+      volume,
+      ...chaptersIn(files, String(volume.slug).replace(/\/index$/, "")),
+    ]),
+  ]
+}
+
+export const SidebarToggle: QuartzComponent = () => (
+  <button
+    type="button"
+    class="novel-sidebar-toggle"
+    aria-controls="novel-sidebar"
+    aria-expanded="true"
+    aria-label="隐藏导航"
+    title="隐藏导航"
+  >
+    <svg
+      viewBox="0 0 24 24"
+      width="17"
+      height="17"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="1.5"
+      aria-hidden="true"
+    >
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M9 4v16M5.5 9h1M5.5 12h1M5.5 15h1" />
+    </svg>
+    <span>隐藏导航</span>
+  </button>
+)
+
+SidebarToggle.beforeDOMLoaded = `(() => {
+  try {
+    if (localStorage.getItem("novel-sidebar-hidden") === "true") {
+      document.documentElement.dataset.novelNav = "hidden"
+    }
+  } catch {}
+})()`
+SidebarToggle.afterDOMLoaded = sidebarScript
+
 function NoteLink({
   file,
   current,
@@ -92,16 +149,15 @@ export const NovelNavigation: QuartzComponent = ({ fileData, allFiles }: QuartzC
   allFiles = allFiles.filter((file) => file.filePath)
   const current = fileData.slug!
   const home = allFiles.find((file) => file.slug === "index")
-  const volumes = sortForReading(
+  const introduction = allFiles.find((file) => file.slug === "声明与人物介绍")
+  const volumes = volumesIn(allFiles)
+  const pages = sortForReading(
     allFiles.filter(
-      (file) => String(file.slug).endsWith("/index") && String(file.slug).split("/").length === 2,
+      (file) => file.slug !== "index" && file !== introduction && !String(file.slug).includes("/"),
     ),
   )
-  const pages = sortForReading(
-    allFiles.filter((file) => file.slug !== "index" && !String(file.slug).includes("/")),
-  )
   return (
-    <nav class="novel-navigation" aria-label="小说阅读导航">
+    <nav id="novel-sidebar" class="novel-navigation" aria-label="小说阅读导航">
       <details class="novel-menu" open>
         <summary>
           阅读目录<span aria-hidden="true">⌄</span>
@@ -112,6 +168,7 @@ export const NovelNavigation: QuartzComponent = ({ fileData, allFiles }: QuartzC
               首页
             </NoteLink>
           )}
+          {introduction && <NoteLink file={introduction} current={current} />}
           {volumes.map((volume) => {
             const folder = String(volume.slug).replace(/\/index$/, "")
             return (
@@ -143,27 +200,48 @@ export const ChapterNavigation: QuartzComponent = ({
   allFiles,
 }: QuartzComponentProps) => {
   allFiles = allFiles.filter((file) => file.filePath)
-  if (fileData.slug === "index" || String(fileData.slug).endsWith("/index")) return null
-  const folder = String(fileData.slug).split("/").slice(0, -1).join("/")
-  if (!folder) return null
-  const chapters = chaptersIn(allFiles, folder)
-  const index = chapters.findIndex((file) => file.slug === fileData.slug)
+  const sequence = readingSequence(allFiles)
+  const index = sequence.findIndex((file) => file.slug === fileData.slug)
   if (index < 0) return null
-  const previous = chapters[index - 1]
-  const next = chapters[index + 1]
+  const previous = sequence[index - 1]
+  const next = sequence[index + 1]
+  if (fileData.slug === "index") {
+    return next ? (
+      <a
+        class="internal home-entry"
+        href={resolveRelative(fileData.slug!, next.slug!)}
+        aria-label="向下继续：声明与人物介绍"
+      >
+        <span>声明 · 人物介绍</span>
+        <svg
+          viewBox="0 0 24 24"
+          width="24"
+          height="24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.3"
+          aria-hidden="true"
+        >
+          <path d="m6 8 6 6 6-6M6 14l6 6 6-6" />
+        </svg>
+      </a>
+    ) : null
+  }
+  const folder = String(fileData.slug).split("/").slice(0, -1).join("/")
   const volume = allFiles.find((file) => file.slug === `${folder}/index`)
+  const isChapter = Boolean(folder) && !String(fileData.slug).endsWith("/index")
   return (
     <nav class="chapter-navigation" aria-label="章节翻页">
       <div>
         {previous && (
           <>
-            <span>上一章</span>
+            <span>{isChapter && previous?.slug !== volume?.slug ? "上一章" : "上一页"}</span>
             <NoteLink file={previous} current={fileData.slug!} />
           </>
         )}
       </div>
       <div class="chapter-directory">
-        {volume && (
+        {volume && isChapter && (
           <NoteLink file={volume} current={fileData.slug!}>
             返回目录
           </NoteLink>
@@ -172,7 +250,7 @@ export const ChapterNavigation: QuartzComponent = ({
       <div>
         {next && (
           <>
-            <span>下一章</span>
+            <span>{isChapter && !String(next?.slug).endsWith("/index") ? "下一章" : "下一页"}</span>
             <NoteLink file={next} current={fileData.slug!} />
           </>
         )}

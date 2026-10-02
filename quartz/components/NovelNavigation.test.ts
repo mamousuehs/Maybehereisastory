@@ -6,6 +6,7 @@ import {
   sortForReading,
   NovelNavigation,
   ChapterNavigation,
+  readingSequence,
 } from "./NovelNavigation"
 import { render } from "preact-render-to-string"
 import { QuartzComponentProps } from "./types"
@@ -72,5 +73,16 @@ test("navigation excludes virtual pages and connects the two chapters", () => {
   assert.ok(!html.includes("标签索引") && !html.includes("无法找到"))
   const pagination = render(ChapterNavigation(props))
   assert.ok(pagination.includes("下一章") && pagination.includes("第一章 开门"))
-  assert.ok(!pagination.includes("上一章"))
+  assert.ok(pagination.includes("上一页") && !pagination.includes("上一章"))
+  assert.ok(pagination.includes("返回目录"))
+  assert.deepEqual(
+    readingSequence(allFiles).map((file) => file.slug),
+    ["index", "声明与人物介绍", "第一卷/index", "第一卷/序章", "第一卷/第一章-开门"],
+  )
+  const cover = render(ChapterNavigation({ ...props, fileData: allFiles[0] }))
+  assert.ok(cover.includes("home-entry") && cover.includes("声明与人物介绍"))
+  const intro = render(ChapterNavigation({ ...props, fileData: allFiles[4] }))
+  assert.ok(intro.includes("下一页") && intro.includes("第一卷"))
+  const directory = render(ChapterNavigation({ ...props, fileData: allFiles[1] }))
+  assert.ok(directory.includes("声明与人物介绍") && directory.includes("序章：意义"))
 })
