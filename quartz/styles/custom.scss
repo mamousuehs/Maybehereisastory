@@ -435,6 +435,14 @@ article.novel-about {
     font-weight: 400;
     line-height: 1.8;
   }
+  kbd {
+    font-size: 11px;
+    padding: 1px 4px;
+    background: transparent;
+    border: 1px solid var(--lightgray);
+    border-radius: 3px;
+    color: var(--secondary);
+  }
 }
 
 a:focus-visible,

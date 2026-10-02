@@ -2,6 +2,7 @@ import { QuartzComponent, QuartzComponentProps } from "./types"
 import { QuartzPluginData } from "../plugins/vfile"
 import { FullSlug, resolveRelative } from "../util/path"
 import sidebarScript from "./scripts/novel-sidebar"
+import paginationScript from "./scripts/novel-pagination"
 
 // Read chapter numbers, not the alphabetical order of Chinese titles.
 export function chineseNumber(value: string): number {
@@ -128,16 +129,24 @@ function NoteLink({
   file,
   current,
   children,
+  shortcut,
 }: {
   file: QuartzPluginData
   current: FullSlug
   children?: string
+  shortcut?: "ArrowLeft" | "ArrowRight"
 }) {
   return (
     <a
       class="internal novel-link"
       href={resolveRelative(current, file.slug!)}
       aria-current={current === file.slug ? "page" : undefined}
+      aria-keyshortcuts={shortcut}
+      title={
+        shortcut
+          ? `${children ?? file.frontmatter?.title}（${shortcut === "ArrowLeft" ? "←" : "→"}）`
+          : undefined
+      }
     >
       {children ?? String(file.frontmatter?.title ?? file.slug)}
     </a>
@@ -211,6 +220,8 @@ export const ChapterNavigation: QuartzComponent = ({
         class="internal home-entry"
         href={resolveRelative(fileData.slug!, next.slug!)}
         aria-label="向下继续：声明与人物介绍"
+        aria-keyshortcuts="ArrowRight"
+        title="下一页（→）"
       >
         <span>声明 · 人物介绍</span>
         <svg
@@ -235,8 +246,10 @@ export const ChapterNavigation: QuartzComponent = ({
       <div>
         {previous && (
           <>
-            <span>{isChapter && previous?.slug !== volume?.slug ? "上一章" : "上一页"}</span>
-            <NoteLink file={previous} current={fileData.slug!} />
+            <span>
+              {isChapter && previous?.slug !== volume?.slug ? "上一章" : "上一页"} <kbd>←</kbd>
+            </span>
+            <NoteLink file={previous} current={fileData.slug!} shortcut="ArrowLeft" />
           </>
         )}
       </div>
@@ -250,11 +263,16 @@ export const ChapterNavigation: QuartzComponent = ({
       <div>
         {next && (
           <>
-            <span>{isChapter && !String(next?.slug).endsWith("/index") ? "下一章" : "下一页"}</span>
-            <NoteLink file={next} current={fileData.slug!} />
+            <span>
+              <kbd>→</kbd>{" "}
+              {isChapter && !String(next?.slug).endsWith("/index") ? "下一章" : "下一页"}
+            </span>
+            <NoteLink file={next} current={fileData.slug!} shortcut="ArrowRight" />
           </>
         )}
       </div>
     </nav>
   )
 }
+
+ChapterNavigation.afterDOMLoaded = paginationScript
