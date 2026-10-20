@@ -1,15 +1,27 @@
 @use "./variables.scss" as *;
 
-// A quiet paper-and-ink reading room. All fonts are local: no large CJK download.
+// Prefer the reader's installed font; otherwise use our compact, self-hosted subset.
+@font-face {
+  font-family: "Novel Reading WenKai";
+  src:
+    local("LXGW WenKai"),
+    local("霞鹜文楷"),
+    url("./static/fonts/novel-wenkai.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 // Avoid a long smooth scroll when a reader follows a link at a chapter's end.
 html {
   scroll-behavior: auto;
 }
 
 :root {
-  --bodyFont: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
-  --headerFont: "Songti SC", "Noto Serif CJK SC", "SimSun", serif;
-  --readingFont: "Songti SC", "Noto Serif CJK SC", "SimSun", serif;
+  --bodyFont: "Novel Reading WenKai", "LXGW WenKai", "霞鹜文楷", "KaiTi", "STKaiti", serif;
+  --titleFont: var(--bodyFont);
+  --headerFont: var(--bodyFont);
+  --readingFont: var(--bodyFont);
 }
 
 body {
@@ -211,6 +223,20 @@ article.novel-chapter {
   font-size: 19px;
   line-height: 2.05;
   letter-spacing: 0.025em;
+  strong {
+    font-weight: 700;
+    color: var(--dark);
+  }
+  blockquote {
+    margin: 1.5em 0;
+    padding: 0.75em 1.2em;
+    border-left: 3px solid var(--tertiary);
+    background: var(--highlight);
+    p {
+      text-indent: 0;
+      margin: 0.4em 0;
+    }
+  }
   .markdown-rendered > p {
     margin: 0 0 1.25em;
     text-indent: 2em;
